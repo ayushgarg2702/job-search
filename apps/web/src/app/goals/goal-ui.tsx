@@ -24,7 +24,10 @@ export function GoalForm() {
         e.preventDefault();
         startTransition(async () => {
           const res = await addGoal({ title, why, targetDate: date || null });
-          if (!res.ok) return toast.error(res.error);
+          if (!res.ok) {
+            toast.error(res.error);
+            return;
+          }
           setTitle("");
           setWhy("");
           setDate("");
