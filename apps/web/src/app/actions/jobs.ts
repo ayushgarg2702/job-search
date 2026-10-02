@@ -2,10 +2,11 @@
 
 import { DraftPackSchema, JobStatusSchema, MANUAL_STATUSES, type DraftPack } from "@career-os/shared";
 import { revalidatePath } from "next/cache";
-import { startAutofill } from "@/lib/apply";
+import { answerFormQuestions } from "@career-os/agents";
+import { latestSession, startAutofill } from "@/lib/apply";
 import { declineJob, getDraft, getJob, setStatus, updateDraftPack } from "@/lib/jobs";
 import { queueDraft } from "@/lib/pipeline";
-import { hasResume } from "@/lib/store";
+import { getProfile, getSettings, hasResume } from "@/lib/store";
 import type { ActionResult } from "./profile";
 
 function refresh() {
@@ -41,6 +42,33 @@ export async function approve(jobId: number): Promise<ActionResult> {
   const res = await startAutofill(job);
   refresh();
   return res;
+}
+
+export async function answerOpenQuestions(jobId: number): Promise<ActionResult> {
+  const job = getJob(jobId);
+  const draft = getDraft(jobId);
+  const session = latestSession(jobId);
+  if (!job || !draft || !session) return { ok: false, error: "Approve the job first." };
+  const known = new Set(draft.pack.answers.map((a) => a.question));
+  const questions = session.skipped
+    .filter((s) => /no answer/i.test(s.reason) && s.label.length > 12 && !known.has(s.label))
+    .map((s) => s.label);
+  if (questions.length === 0) return { ok: false, error: "No open questions left." };
+  const { answers, source } = await answerFormQuestions(
+    getProfile(),
+    { title: job.title, company: job.company, location: job.location, description: job.description },
+    questions,
+    { model: getSettings().cursorModel || undefined },
+  );
+  if (answers.length === 0) {
+    return { ok: false, error: "Your resume doesn't cover these questions. Answer them in the form yourself." };
+  }
+  updateDraftPack(jobId, { ...draft.pack, answers: [...draft.pack.answers, ...answers] });
+  refresh();
+  return {
+    ok: true,
+    message: `Wrote ${answers.length} answer${answers.length === 1 ? "" : "s"}${source === "resume" ? " from your resume bullets" : ""}. Press Fill again to put them in the form.`,
+  };
 }
 
 export async function fillMyself(jobId: number): Promise<ActionResult> {
