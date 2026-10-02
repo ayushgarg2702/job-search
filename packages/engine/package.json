@@ -1,0 +1,19 @@
+{
+  "name": "@career-os/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@career-os/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

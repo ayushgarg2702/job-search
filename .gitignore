@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+dist/
+.env*.local
+.env
+*.log
+.DS_Store
+
+# local user data: resume, jobs, drafts, browser profile
+data/*
+!data/.gitkeep
+
+# python worker
+workers/jobspy/.venv/
+__pycache__/
+*.pyc
