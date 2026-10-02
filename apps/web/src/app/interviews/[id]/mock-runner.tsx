@@ -83,7 +83,6 @@ export function MockRunner({
 
   useEffect(() => {
     if (finished || reviewing || !current) return;
-    setSeconds(0);
     timer.current = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => {
       if (timer.current) clearInterval(timer.current);
@@ -198,6 +197,7 @@ export function MockRunner({
               setLastFeedback(null);
               setDraft("");
               setShowTip(false);
+              setSeconds(0);
             }}
           >
             {index + 1 < questions.length ? "Next question" : "See results"} <ArrowRight />
