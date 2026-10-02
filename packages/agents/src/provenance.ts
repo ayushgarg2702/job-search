@@ -15,7 +15,21 @@ function sourceText(profile: Profile): string {
     profile.currentCtcInr ? String(profile.currentCtcInr) : "",
     profile.expectedCtcInr ? String(profile.expectedCtcInr) : "",
     profile.noticePeriodDays ? String(profile.noticePeriodDays) : "",
+    profile.phone.replace(/\D/g, ""),
+    ...[profile.currentCtcInr, profile.expectedCtcInr]
+      .filter((n): n is number => Boolean(n))
+      .flatMap((n) => [String(Math.round(n / 100000)), (n / 100000).toFixed(1)]),
   ].join("\n");
+}
+
+/** "I haven't used Java yet" is honesty, not a claim. */
+const NEGATION = /\b(haven't|have not|not used|no experience|never used|picking (it )?up|learning|new to)\b/i;
+
+function withoutNegatedSentences(text: string): string {
+  return text
+    .split(/(?<=[.!?])\s+|\n/)
+    .filter((s) => !NEGATION.test(s))
+    .join("\n");
 }
 
 function sentenceAround(text: string, index: number): string {
@@ -37,16 +51,17 @@ export function checkProvenance(draft: string, profile: Profile, jobText = ""): 
   const jobNumbers = new Set((jobText.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(/,/g, "")));
   const issues: ProvenanceIssue[] = [];
 
-  for (const m of draft.matchAll(/\d+(?:[.,]\d+)?/g)) {
+  const claims = withoutNegatedSentences(draft);
+  for (const m of claims.matchAll(/\d+(?:[.,]\d+)?/g)) {
     const n = m[0].replace(/,/g, "");
     if (n.length === 4 && /^(19|20)\d\d$/.test(n) && sourceNumbers.has(n)) continue;
     if (sourceNumbers.has(n) || jobNumbers.has(n)) continue;
     if (Number(n) <= 1) continue;
-    issues.push({ kind: "number", value: m[0], context: sentenceAround(draft, m.index ?? 0) });
+    issues.push({ kind: "number", value: m[0], context: sentenceAround(claims, m.index ?? 0) });
   }
 
   const sourceSkills = extractSkills(source);
-  for (const skill of extractSkills(draft)) {
+  for (const skill of extractSkills(claims)) {
     if (sourceSkills.includes(skill) || hasSkill(profile.skills, skill)) continue;
     issues.push({ kind: "skill", value: skill, context: `Draft claims ${skill}, which is not in your resume.` });
   }

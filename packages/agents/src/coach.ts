@@ -1,5 +1,5 @@
 import { rubricFeedback, type AnswerFeedback } from "@career-os/engine";
-import { extractJson, findCursorBin, runCursor } from "./cursor";
+import { cursorReady, extractJson, runCursor } from "./cursor";
 import { VOICE_RULES } from "./voice";
 
 export type CoachFeedback = AnswerFeedback & { better: string | null; source: "cursor" | "rubric" };
@@ -11,7 +11,10 @@ export async function coachAnswer(
   context: { role?: string; resumeText?: string; model?: string } = {},
 ): Promise<CoachFeedback> {
   const rubric = rubricFeedback(question, answer);
-  if (!findCursorBin() || answer.trim().length < 10) return { ...rubric, better: null, source: "rubric" };
+  const cursor = cursorReady();
+  if (!cursor.installed || cursor.loggedIn === false || answer.trim().length < 10) {
+    return { ...rubric, better: null, source: "rubric" };
+  }
 
   const prompt = `You are an interviewer at an Indian tech company giving blunt, useful feedback on a practice answer. Do not use any tools. Only reply with text.
 

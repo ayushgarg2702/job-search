@@ -88,38 +88,35 @@ export function templateDraft(profile: Profile, job: JobForDraft): DraftPack {
     .sort((a, b) => relevance(b, jdSkills) - relevance(a, jdSkills))
     .slice(0, 2);
 
-  const parts: string[] = [`Hi ${job.company} team,`, ""];
   const where = job.location ? ` in ${normalizeCity(job.location)}` : "";
-  parts.push(`I'd like to apply for the ${job.title} role${where}.`);
+  const intro = [`I'd like to apply for the ${job.title} role${where}.`];
   if (latest?.title) {
-    parts.push(
-      `I have ${profile.yearsExperience} years of experience. Right now I work as ${latest.title}${latest.company ? ` at ${latest.company}` : ""}.`,
+    intro.push(
+      `I have ${profile.yearsExperience} years of experience and right now I work as ${latest.title}${latest.company ? ` at ${latest.company}` : ""}.`,
     );
   } else if (profile.yearsExperience) {
-    parts.push(`I have ${profile.yearsExperience} years of experience.`);
+    intro.push(`I have ${profile.yearsExperience} years of experience.`);
   }
-  parts.push("");
-  if (matched.length) parts.push(`The posting asks for ${matched.join(", ")}. That is what I work with day to day.`);
-  if (bullets.length) {
-    parts.push("A couple of things I've done:");
-    for (const b of bullets) parts.push(`- ${b.replace(/\.$/, "")}.`);
-  }
+
+  const paragraphs: string[] = [`Hi ${job.company} team,`, intro.join(" ")];
+  const fit: string[] = [];
+  if (matched.length) fit.push(`The posting asks for ${matched.join(", ")}, which is what I work with day to day.`);
+  if (bullets.length) fit.push(`Two things I've done recently:\n${bullets.map((b) => `- ${b.replace(/\.$/, "")}.`).join("\n")}`);
+  if (fit.length) paragraphs.push(fit.join(" "));
   if (missing.length) {
-    parts.push("", `I haven't used ${missing.join(" or ")} at work yet. I'm picking it up now and can talk about where I am with it.`);
+    paragraphs.push(`I haven't used ${missing.join(" or ")} at work yet. I'm picking it up and can talk about where I am with it.`);
   }
-  parts.push("");
+  const close: string[] = [];
   if (profile.noticePeriodDays !== null) {
-    parts.push(
-      profile.noticePeriodDays === 0
-        ? "I can join immediately."
-        : `My notice period is ${profile.noticePeriodDays} days.`,
-    );
+    close.push(profile.noticePeriodDays === 0 ? "I can join immediately." : `My notice period is ${profile.noticePeriodDays} days.`);
   }
-  parts.push("Happy to share more on a call.", "", "Thanks,", profile.name || "", [profile.phone, profile.email].filter(Boolean).join(" · "));
+  close.push("Happy to share more on a call.");
+  paragraphs.push(close.join(" "));
+  paragraphs.push(["Thanks,", profile.name, [profile.phone, profile.email].filter(Boolean).join(" · ")].filter(Boolean).join("\n"));
 
   return {
     resumeMarkdown: tailoredResumeMarkdown(profile, job),
-    coverLetter: parts.join("\n").replace(/\n{3,}/g, "\n\n").trim(),
+    coverLetter: paragraphs.join("\n\n").trim(),
     answers: [
       ...standardAnswers(profile, job),
       {

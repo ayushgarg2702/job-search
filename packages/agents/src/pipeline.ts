@@ -1,6 +1,6 @@
 import type { DraftPack, Profile } from "@career-os/shared";
 import { DraftPackSchema } from "@career-os/shared";
-import { extractJson, findCursorBin, runCursor } from "./cursor";
+import { cursorReady, extractJson, runCursor } from "./cursor";
 import { checkProvenance, stripIssues, type ProvenanceIssue } from "./provenance";
 import { standardAnswers, templateDraft, type JobForDraft } from "./template";
 import { lintVoice, VOICE_RULES, type VoiceHit } from "./voice";
@@ -127,9 +127,16 @@ export async function runDraftPipeline(
   const steps: DraftStep[] = [];
   const jobText = `${job.title}\n${job.description}`;
 
-  if (!findCursorBin()) {
+  const cursor = cursorReady();
+  if (!cursor.installed || cursor.loggedIn === false) {
     const check = problemsList(packText(base), profile, jobText);
-    steps.push({ name: "Offline draft", ok: true, note: "Cursor CLI not found, built from your resume only." });
+    steps.push({
+      name: "Offline draft",
+      ok: true,
+      note: cursor.installed
+        ? "Cursor CLI is not signed in (run `agent login`). Built from your resume only."
+        : "Cursor CLI not found. Built from your resume only.",
+    });
     return { pack: base, source: "template", steps, voiceHits: check.voiceHits, provenance: check.provenance };
   }
 

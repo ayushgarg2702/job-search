@@ -1,10 +1,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 
-/** Newer installs ship `agent`; older ones ship `cursor-agent`. */
-const CANDIDATES = ["agent", "cursor-agent"];
+/** Newer installs ship `agent`; older ones ship `cursor-agent`. The installer puts both in ~/.local/bin. */
+const LOCAL_BIN = path.join(homedir(), ".local", "bin");
+const CANDIDATES = ["agent", "cursor-agent", path.join(LOCAL_BIN, "agent"), path.join(LOCAL_BIN, "cursor-agent")];
 
 let cachedBin: string | null | undefined;
 
@@ -30,6 +31,16 @@ export type CursorStatus = {
   loggedIn: boolean | null;
   detail: string;
 };
+
+let statusCache: { at: number; value: CursorStatus } | null = null;
+
+/** Cached for a minute so the draft queue doesn't shell out on every job. */
+export function cursorReady(): CursorStatus {
+  if (statusCache && Date.now() - statusCache.at < 60_000) return statusCache.value;
+  const value = cursorStatus();
+  statusCache = { at: Date.now(), value };
+  return value;
+}
 
 export function cursorStatus(): CursorStatus {
   cachedBin = undefined;
