@@ -11,5 +11,8 @@
     "worker:jobspy": "cd workers/jobspy && ./run.sh",
     "worker:browser": "pnpm --filter @career-os/browser-worker start",
     "browser:install": "pnpm --filter @career-os/browser-worker exec playwright install chromium"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }

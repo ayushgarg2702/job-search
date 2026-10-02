@@ -7,8 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@career-os/shared": "workspace:*"
