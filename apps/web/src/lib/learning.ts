@@ -5,11 +5,16 @@ import { listJobs } from "./jobs";
 
 export type LearningItem = { id: number; skill: string; title: string; notes: string; status: "todo" | "doing" | "done"; minutes: number };
 
+/** Every posting mentions these; they aren't something you go and study. */
+const NOT_STUDYABLE = new Set(["Communication", "Leadership", "Agile"]);
+
 /** Skills that keep showing up in jobs you could apply for but are not on your resume. */
 export function skillGaps(limit = 12): GapCount[] {
   const counts = new Map<string, number>();
   for (const job of listJobs(["scored", "drafting", "draft_ready", "awaiting_approval", "autofilling", "ready_to_submit", "submitted", "interviewing", "rejected"], 2000)) {
-    for (const s of job.evaluation?.missing ?? []) counts.set(s, (counts.get(s) ?? 0) + 1);
+    for (const s of job.evaluation?.missing ?? []) {
+      if (!NOT_STUDYABLE.has(s)) counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
   }
   return [...counts.entries()]
     .map(([skill, jobs]) => ({ skill, jobs }))
