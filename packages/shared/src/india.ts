@@ -53,7 +53,7 @@ export function formatLpa(amountInr: number | null | undefined): string {
 }
 
 export const SOURCES = [
-  { id: "naukri", label: "Naukri", via: "jobspy" },
+  { id: "naukri", label: "Naukri", via: "browser" },
   { id: "instahyre", label: "Instahyre", via: "direct" },
   { id: "indeed", label: "Indeed India", via: "jobspy" },
   { id: "linkedin", label: "LinkedIn", via: "jobspy" },

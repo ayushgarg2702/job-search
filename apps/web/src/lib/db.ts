@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS learning_items (
   skill TEXT NOT NULL,
   title TEXT NOT NULL,
   notes TEXT NOT NULL DEFAULT '',
+  resources TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'todo',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -150,9 +151,17 @@ export function db(): Database.Database {
     conn.pragma("journal_mode = WAL");
     conn.pragma("foreign_keys = ON");
     conn.exec(SCHEMA);
+    migrate(conn);
     globalForDb.__careerDb = conn;
   }
   return globalForDb.__careerDb;
+}
+
+function migrate(conn: Database.Database) {
+  const cols = conn.prepare("PRAGMA table_info(learning_items)").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "resources")) {
+    conn.exec("ALTER TABLE learning_items ADD COLUMN resources TEXT NOT NULL DEFAULT '[]'");
+  }
 }
 
 export function getKv<T>(key: string, fallback: T): T {

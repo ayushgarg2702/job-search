@@ -1,5 +1,6 @@
 import type { Profile } from "@career-os/shared";
 import { extractSkills } from "./skills";
+import { isNoiseTitle } from "./titles";
 
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
 const PHONE_RE = /(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/;
@@ -9,7 +10,8 @@ const YEARS_RE = /(\d{1,2}(?:\.\d)?)\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experie
 const DATE_RANGE_RE =
   /((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*\d{4}|\d{1,2}\/\d{4}|\d{4})\s*(?:-|–|—|to)\s*((?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*\d{4}|\d{1,2}\/\d{4}|\d{4}|present|current|now|till date)/i;
 
-const SECTION_RE = /^(experience|work experience|professional experience|employment|education|skills|technical skills|projects|certifications|summary|profile|achievements)\b/i;
+const SECTION_RE =
+  /^(experience|work experience|professional experience|professional summary|employment|education|skills|technical skills|projects|certifications|summary|profile|objective|achievements|contact)\b/i;
 
 function cleanLines(text: string): string[] {
   return text
@@ -104,7 +106,20 @@ export function parseResume(text: string): Partial<Profile> {
     if (section === "education" && education.length < 4) education.push(line);
   }
 
-  const headline = lines.find((l, i) => i > 0 && i < 6 && l !== name && l.length < 80 && !EMAIL_RE.test(l) && !PHONE_RE.test(l)) ?? "";
+  const rawHeadline =
+    lines.find(
+      (l, i) =>
+        i > 0 &&
+        i < 8 &&
+        l !== name &&
+        l.length < 80 &&
+        !EMAIL_RE.test(l) &&
+        !PHONE_RE.test(l) &&
+        !SECTION_RE.test(l) &&
+        !isNoiseTitle(l),
+    ) ?? "";
+  const firstRole = experience.find((e) => e.title && !isNoiseTitle(e.title))?.title ?? "";
+  const headline = firstRole || rawHeadline;
 
   return {
     name,

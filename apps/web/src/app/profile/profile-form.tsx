@@ -110,7 +110,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
 
       <Section title="What you are looking for" hint="Used for fit scores and for CTC and notice period answers.">
         <Field label="Job titles you want">
-          <TagInput value={p.targetTitles} onChange={(v) => set("targetTitles", v)} placeholder="Type a title and press Enter" />
+          <TagInput value={p.targetTitles} onChange={(v) => set("targetTitles", v)} placeholder="Sr. SDE, Senior Software Engineer" />
+          <p className="text-xs text-muted-foreground">These drive job search. Be specific — not just &quot;software engineer&quot;.</p>
         </Field>
         <Field label="Cities you'd work in">
           <TagInput value={p.preferredCities} onChange={(v) => set("preferredCities", v)} suggestions={INDIA_CITIES} />

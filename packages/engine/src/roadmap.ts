@@ -1,3 +1,6 @@
+import type { LearnResource } from "./resources";
+import { mergeResources } from "./resources";
+
 export type GapCount = { skill: string; jobs: number };
 
 export type RoadmapDraftItem = {
@@ -7,22 +10,16 @@ export type RoadmapDraftItem = {
   detail: string;
 };
 
-const PROJECT_HINTS: Record<string, string> = {
-  "System design": "Write up the design of one system you built: load, data model, what broke, what you would change.",
-  Kubernetes: "Deploy one of your services on a local kind/minikube cluster with a health check and rolling update.",
-  Docker: "Containerise a side project and push the image; document the run command in the README.",
-  AWS: "Host a small API on AWS free tier (Lambda or EC2 + RDS) and note the monthly cost.",
-  "Data structures & algorithms": "Do 3 medium problems a day on arrays, trees and graphs for two weeks. Track which ones you got stuck on.",
-  React: "Ship a small React app with routing, a form and an API call. Put it on GitHub with screenshots.",
-  TypeScript: "Convert one JS project to strict TypeScript and fix every error without `any`.",
-  SQL: "Solve 20 SQL questions on joins, window functions and group by. Save the ones you missed.",
-  Kafka: "Build a producer/consumer pair locally and handle a consumer crash without losing messages.",
-  "LLMs / GenAI": "Build a small RAG tool over your own notes and measure where it answers wrong.",
+export type LearningDraftItem = {
+  skill: string;
+  title: string;
+  notes: string;
+  resources: LearnResource[];
 };
 
 /**
- * Turns a goal and the skills you keep missing into a four-phase plan.
- * The plan is a starting point; every item is editable in the UI.
+ * Offline fallback: build a short plan from real skill gaps only.
+ * Each item includes real videos / docs / practice sites.
  */
 export function buildRoadmap(goal: string, gaps: GapCount[], weeksPerPhase = 2): RoadmapDraftItem[] {
   const top = gaps.slice(0, 5);
@@ -34,16 +31,17 @@ export function buildRoadmap(goal: string, gaps: GapCount[], weeksPerPhase = 2):
     items.push({
       phase: 1,
       phaseTitle: p1,
-      title: "Fetch jobs first",
+      title: "Search for your target roles first",
       detail: "Run a search so the app can see which skills keep showing up in roles you want.",
     });
   }
   for (const g of top.slice(0, 3)) {
+    const topLink = mergeResources(g.skill)[0];
     items.push({
       phase: 1,
       phaseTitle: p1,
       title: `Learn ${g.skill}`,
-      detail: `${g.jobs} of the jobs you fetched ask for it. Aim for 5 hours this phase.`,
+      detail: `${g.jobs} of the jobs you fetched ask for it.${topLink ? ` Start here: ${topLink.url}` : ""}`,
     });
   }
 
@@ -53,53 +51,54 @@ export function buildRoadmap(goal: string, gaps: GapCount[], weeksPerPhase = 2):
       phase: 2,
       phaseTitle: p2,
       title: `Small project: ${g.skill}`,
-      detail: PROJECT_HINTS[g.skill] ?? `Build one small thing that uses ${g.skill} and put it on GitHub.`,
+      detail: `Build one small thing that uses ${g.skill} and put it on GitHub so you can talk about it in interviews.`,
     });
   }
-  items.push({
-    phase: 2,
-    phaseTitle: p2,
-    title: "Update your resume",
-    detail: "Add what you built in this phase. Only add it once it works.",
-  });
+  if (top.length) {
+    items.push({
+      phase: 2,
+      phaseTitle: p2,
+      title: "Update your resume",
+      detail: "Add what you built in this phase. Only add it once it works.",
+    });
+  }
 
   const p3 = `Apply · ${w(3)}`;
-  items.push(
-    {
-      phase: 3,
-      phaseTitle: p3,
-      title: "Hit your weekly application target",
-      detail: "Approve drafts from the inbox every day instead of in one big batch.",
-    },
-    {
-      phase: 3,
-      phaseTitle: p3,
-      title: "Message one person per application",
-      detail: "A short note to someone on the team. Referrals move faster than the portal.",
-    },
-  );
+  items.push({
+    phase: 3,
+    phaseTitle: p3,
+    title: "Approve and submit matching drafts",
+    detail: "Work through the inbox for roles that match your target titles.",
+  });
 
   const p4 = `Interview · ${w(4)}`;
   items.push(
     {
       phase: 4,
       phaseTitle: p4,
-      title: "Two mock interviews a week",
-      detail: "Use the dummy interview page. Redo any answer that scored low.",
+      title: "Practice mock interviews for your target role",
+      detail: "Generate questions for the role you want and redo weak answers.",
     },
     {
       phase: 4,
       phaseTitle: p4,
-      title: "Prepare CTC and notice period answers",
-      detail: "Know your current CTC, expected CTC and earliest joining date before the HR round.",
-    },
-    {
-      phase: 4,
-      phaseTitle: p4,
-      title: `Reach the goal: ${goal}`,
-      detail: "Compare offers on role, team and pay, not just the number.",
+      title: goal ? `Reach: ${goal}` : "Keep applying to matching roles",
+      detail: goal
+        ? "Compare offers on role, team and pay, not just the number."
+        : "Stay focused on the titles you set on your resume.",
     },
   );
 
   return items;
+}
+
+/** Offline learning list from gaps — always includes concrete learn/practice URLs. */
+export function buildLearningFromGaps(gaps: GapCount[], targetTitles: string[]): LearningDraftItem[] {
+  const role = targetTitles[0] ?? "your target role";
+  return gaps.slice(0, 8).map((g) => ({
+    skill: g.skill,
+    title: `Learn ${g.skill} for ${role}`,
+    notes: `${g.jobs} fetched job${g.jobs === 1 ? "" : "s"} ask for this and it is not strong on your resume yet.`,
+    resources: mergeResources(g.skill),
+  }));
 }

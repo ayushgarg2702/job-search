@@ -53,7 +53,9 @@ export function SearchForm({ config, sources, jobspyUp }: { config: SearchConfig
                   {s.label}
                 </Label>
                 <span className="text-xs text-muted-foreground">
-                  {needsWorker ? (
+                  {s.id === "naukri" ? (
+                    "Helper browser · Unlock once for captcha"
+                  ) : needsWorker ? (
                     jobspyUp ? (
                       <span className="text-leaf">JobSpy worker running</span>
                     ) : (
@@ -73,7 +75,10 @@ export function SearchForm({ config, sources, jobspyUp }: { config: SearchConfig
         <h2 className="text-xl font-semibold text-ink">What to search</h2>
         <div className="grid gap-1.5">
           <Label>Search terms</Label>
-          <TagInput value={cfg.searchTerms} onChange={(v) => set("searchTerms", v)} placeholder="backend engineer, python developer" />
+          <TagInput value={cfg.searchTerms} onChange={(v) => set("searchTerms", v)} placeholder="Sr. SDE, Senior Software Engineer" />
+          <p className="text-xs text-muted-foreground">
+            Synced from your Resume target titles. Keep these specific — broad terms like &quot;software engineer&quot; pull in SDET/SRE noise.
+          </p>
         </div>
         <div className="grid gap-1.5">
           <Label>Locations</Label>

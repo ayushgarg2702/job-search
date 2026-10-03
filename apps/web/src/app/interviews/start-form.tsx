@@ -10,14 +10,19 @@ import { Label } from "@/components/ui/label";
 export function StartMockForm({
   tracks,
   roles,
+  jobs,
   defaultTrack,
+  defaultRole,
 }: {
   tracks: { id: QuestionTrack; label: string }[];
   roles: string[];
+  jobs: { id: number; label: string }[];
   defaultTrack: QuestionTrack;
+  defaultRole: string;
 }) {
   const [track, setTrack] = useState<QuestionTrack>(defaultTrack);
-  const [role, setRole] = useState(roles[0] ?? "");
+  const [role, setRole] = useState(defaultRole || roles[0] || "");
+  const [jobId, setJobId] = useState<string>("");
   const [count, setCount] = useState(5);
   const [pending, startTransition] = useTransition();
 
@@ -26,7 +31,9 @@ export function StartMockForm({
       className="grid gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        startTransition(() => startMock({ track, role, count }));
+        startTransition(() =>
+          startMock({ track, role, count, jobId: jobId ? Number(jobId) : null }),
+        );
       }}
     >
       <div className="grid gap-1.5">
@@ -45,13 +52,34 @@ export function StartMockForm({
       </div>
       <div className="grid gap-1.5">
         <Label>Role you&apos;re practising for</Label>
-        <Input list="mock-roles" value={role} onChange={(e) => setRole(e.target.value)} placeholder="Backend Engineer at Groww" />
+        <Input list="mock-roles" value={role} onChange={(e) => setRole(e.target.value)} placeholder="Sr. SDE" />
         <datalist id="mock-roles">
           {roles.map((r) => (
             <option key={r} value={r} />
           ))}
         </datalist>
       </div>
+      {jobs.length > 0 && (
+        <div className="grid gap-1.5">
+          <Label>Optional: base on a specific job</Label>
+          <select
+            value={jobId}
+            onChange={(e) => {
+              setJobId(e.target.value);
+              const job = jobs.find((j) => String(j.id) === e.target.value);
+              if (job) setRole(job.label);
+            }}
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+          >
+            <option value="">Just the role above</option>
+            {jobs.map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="grid gap-1.5">
         <Label>Questions</Label>
         <div className="flex gap-1.5">
@@ -68,7 +96,7 @@ export function StartMockForm({
         </div>
       </div>
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Setting up…" : "Start interview"}
+        {pending ? "Writing questions…" : "Start interview"}
       </Button>
     </form>
   );

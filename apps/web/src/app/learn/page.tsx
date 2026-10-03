@@ -1,7 +1,8 @@
 import { PageHeader } from "@/components/page-header";
 import { listLearning, mockScoreTrend, recentPractice, skillGaps, studyByDay, studyTotals } from "@/lib/learning";
 import { activityStreak } from "@/lib/metrics";
-import { GapList, LearningList, StudyLogForm } from "./learn-ui";
+import { getProfile } from "@/lib/store";
+import { GapList, GeneratePlanButton, LearningList, StudyLogForm } from "./learn-ui";
 import { MockTrendChart, StudyChart } from "./learn-charts";
 
 export default function LearnPage() {
@@ -11,16 +12,28 @@ export default function LearnPage() {
   const byDay = studyByDay();
   const trend = mockScoreTrend();
   const recent = recentPractice();
+  const profile = getProfile();
   const onList = new Set(items.filter((i) => i.status !== "done").map((i) => i.skill.toLowerCase()));
 
   return (
     <>
-      <PageHeader title="Learn" lead="What the jobs you want keep asking for, what you're working on, and how much you've put in." />
+      <PageHeader
+        title="Learn"
+        lead={
+          profile.targetTitles.length
+            ? `What ${profile.targetTitles[0]} roles keep asking for, and what you're working on.`
+            : "What the jobs you want keep asking for, what you're working on, and how much you've put in."
+        }
+      >
+        <GeneratePlanButton />
+      </PageHeader>
 
       <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr]">
         <section className="space-y-4">
           <h2 className="text-xl font-semibold text-ink">What you need to learn</h2>
-          <p className="text-sm text-muted-foreground">Skills in your fetched jobs that aren&apos;t on your resume, most asked first.</p>
+          <p className="text-sm text-muted-foreground">
+            Skills jobs ask for that aren&apos;t strong on your resume. Press Generate plan to get videos, docs, and practice sites for each.
+          </p>
           <GapList gaps={gaps} onList={[...onList]} />
         </section>
 
@@ -34,7 +47,7 @@ export default function LearnPage() {
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <h2 className="text-xl font-semibold text-ink">Self-training</h2>
-            <p className="text-sm text-muted-foreground">Log every study session, even 15 minutes. It adds up and it counts toward your target.</p>
+            <p className="text-sm text-muted-foreground">Log every study session, even 15 minutes. It adds up.</p>
           </div>
           <div className="flex gap-10">
             <div>

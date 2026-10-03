@@ -5,3 +5,5 @@ export * from "./template";
 export * from "./pipeline";
 export * from "./coach";
 export * from "./form-answers";
+export * from "./learn-plan";
+export * from "./interview-gen";

@@ -7,7 +7,7 @@ import { listJobs } from "@/lib/jobs";
 import { StatusMenu } from "./status-menu";
 
 const COLUMNS: { title: string; statuses: JobStatus[]; hint: string }[] = [
-  { title: "Approved", statuses: ["autofilling", "ready_to_submit"], hint: "Waiting for your Submit" },
+  { title: "Approved", statuses: ["autofilling", "ready_to_submit"], hint: "Form filled — waiting for your Submit" },
   { title: "Submitted", statuses: ["submitted"], hint: "Waiting to hear back" },
   { title: "Interviewing", statuses: ["interviewing"], hint: "In process" },
   { title: "Offer", statuses: ["offer"], hint: "You did it" },

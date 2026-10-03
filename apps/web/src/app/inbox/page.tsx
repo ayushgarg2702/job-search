@@ -1,4 +1,5 @@
 import type { JobStatus } from "@career-os/shared";
+import { SOURCES } from "@career-os/shared";
 import Link from "next/link";
 import { EmptyState, PageHeader } from "@/components/page-header";
 import { ScoreBadge, SOURCE_NAME } from "@/components/score-badge";
@@ -15,12 +16,38 @@ const TABS: { id: string; label: string; statuses: JobStatus[]; empty: string }[
   { id: "declined", label: "Declined", statuses: ["declined"], empty: "You haven't declined anything." },
 ];
 
+const SOURCE_IDS = new Set(SOURCES.map((s) => s.id));
+
+function hrefFor(tab: string, source: string | null) {
+  const q = new URLSearchParams();
+  q.set("tab", tab);
+  if (source) q.set("source", source);
+  return `/inbox?${q.toString()}`;
+}
+
 export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
-  const { tab: tabParam } = await searchParams;
+  const { tab: tabParam, source: sourceParam } = await searchParams;
   const tab = TABS.find((t) => t.id === tabParam) ?? TABS[0];
+  const sourceFilter =
+    typeof sourceParam === "string" && SOURCE_IDS.has(sourceParam as (typeof SOURCES)[number]["id"])
+      ? sourceParam
+      : null;
+
   const counts = statusCounts();
-  const jobs = listJobs(tab.statuses, 300);
+  const allInTab = listJobs(tab.statuses, 500);
+  const bySource = new Map<string, number>();
+  for (const j of allInTab) bySource.set(j.source, (bySource.get(j.source) ?? 0) + 1);
+  const jobs = sourceFilter ? allInTab.filter((j) => j.source === sourceFilter) : allInTab;
   const threshold = getSettings().draftThreshold;
+
+  const sourceChips = [
+    { id: null as string | null, label: "All boards", count: allInTab.length },
+    ...SOURCES.map((s) => ({
+      id: s.id as string | null,
+      label: SOURCE_NAME[s.id] ?? s.label,
+      count: bySource.get(s.id) ?? 0,
+    })).filter((s) => s.count > 0 || s.id === sourceFilter),
+  ];
 
   return (
     <>
@@ -30,13 +57,13 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
       />
       <InboxAutoRefresh active={(counts.drafting ?? 0) > 0} />
 
-      <nav className="mb-6 flex flex-wrap gap-1 rounded-xl bg-muted p-1 sm:w-fit">
+      <nav className="mb-4 flex flex-wrap gap-1 rounded-xl bg-muted p-1 sm:w-fit">
         {TABS.map((t) => {
           const n = t.statuses.reduce((a, s) => a + (counts[s] ?? 0), 0);
           return (
             <Link
               key={t.id}
-              href={`/inbox?tab=${t.id}`}
+              href={hrefFor(t.id, sourceFilter)}
               className={cn(
                 "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                 t.id === tab.id ? "bg-card text-ink shadow-sm" : "text-muted-foreground hover:text-foreground",
@@ -48,13 +75,42 @@ export default async function InboxPage({ searchParams }: PageProps<"/inbox">) {
         })}
       </nav>
 
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Found on</span>
+        {sourceChips.map((s) => (
+          <Link
+            key={s.id ?? "all"}
+            href={hrefFor(tab.id, s.id)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-sm transition-colors",
+              (s.id ?? null) === sourceFilter
+                ? "border-ink bg-ink text-primary-foreground"
+                : "bg-card text-muted-foreground hover:border-ink/40 hover:text-foreground",
+            )}
+          >
+            {s.label}
+            <span className="ml-1.5 font-mono text-xs opacity-80">{s.count}</span>
+          </Link>
+        ))}
+      </div>
+
       {jobs.length === 0 ? (
         <EmptyState
-          title={tab.empty}
+          title={
+            sourceFilter
+              ? `No ${SOURCE_NAME[sourceFilter] ?? sourceFilter} jobs in this tab.`
+              : tab.empty
+          }
           action={
-            <Link href="/connections" className={buttonVariants({ variant: "outline" })}>
-              Go to job boards
-            </Link>
+            sourceFilter ? (
+              <Link href={hrefFor(tab.id, null)} className={buttonVariants({ variant: "outline" })}>
+                Clear board filter
+              </Link>
+            ) : (
+              <Link href="/connections" className={buttonVariants({ variant: "outline" })}>
+                Go to job boards
+              </Link>
+            )
           }
         />
       ) : (

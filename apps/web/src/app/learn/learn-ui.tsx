@@ -1,10 +1,10 @@
 "use client";
 
-import type { GapCount } from "@career-os/engine";
-import { Check, Plus, Trash2 } from "lucide-react";
+import type { GapCount, LearnResource } from "@career-os/engine";
+import { BookOpen, Check, ExternalLink, PlayCircle, Plus, Trash2, Wand2, Wrench } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { addLearningItem, deleteLearningItem, logStudy, setLearningStatus } from "@/app/actions/learn";
+import { addLearningItem, deleteLearningItem, generateLearningPlan, logStudy, setLearningStatus } from "@/app/actions/learn";
 import { EmptyState } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,65 @@ function useAction() {
       }
     });
   return { pending, run };
+}
+
+const KIND_ICON = {
+  video: PlayCircle,
+  course: BookOpen,
+  docs: BookOpen,
+  practice: Wrench,
+} as const;
+
+const KIND_LABEL = {
+  video: "Video",
+  course: "Course",
+  docs: "Docs",
+  practice: "Practice",
+} as const;
+
+function ResourceLinks({ resources }: { resources: LearnResource[] }) {
+  if (!resources.length) return null;
+  return (
+    <ul className="mt-2 flex flex-wrap gap-1.5">
+      {resources.map((r) => {
+        const Icon = KIND_ICON[r.kind] ?? ExternalLink;
+        return (
+          <li key={r.url}>
+            <a
+              href={r.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-xs font-medium text-ink transition-colors hover:border-ink/40 hover:bg-muted"
+            >
+              <Icon className="size-3.5 shrink-0 text-marigold" />
+              <span className="text-muted-foreground">{KIND_LABEL[r.kind] ?? "Link"} ·</span>
+              <span className="max-w-[14rem] truncate">{r.label}</span>
+              <ExternalLink className="size-3 shrink-0 opacity-50" />
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function GeneratePlanButton() {
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      size="lg"
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const res = await generateLearningPlan();
+          if (res.ok) toast.success(res.message);
+          else toast.error(res.error);
+        })
+      }
+    >
+      <Wand2 /> {pending ? "Generating…" : "Generate plan"}
+    </Button>
+  );
 }
 
 export function GapList({ gaps, onList }: { gaps: GapCount[]; onList: string[] }) {
@@ -87,36 +146,46 @@ export function LearningList({ items }: { items: LearningItem[] }) {
         </Button>
       </form>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nothing on your list yet. Pick a gap on the left.</p>
+        <p className="text-sm text-muted-foreground">
+          Nothing on your list yet. Press Generate plan, or pick a gap on the left — each item gets videos and practice sites.
+        </p>
       ) : (
-        <ul className="stagger space-y-2">
+        <ul className="stagger space-y-3">
           {items.map((it) => (
-            <li key={it.id} className="group flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
-              <button
-                type="button"
-                onClick={() => run(() => setLearningStatus(it.id, STATUS_NEXT[it.status]))}
-                className={cn(
-                  "shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold transition-colors",
-                  it.status === "done" && "bg-leaf/15 text-leaf",
-                  it.status === "doing" && "bg-accent text-accent-foreground",
-                  it.status === "todo" && "bg-muted text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {STATUS_TEXT[it.status]}
-              </button>
-              <p className={cn("min-w-0 flex-1 truncate font-medium", it.status === "done" && "text-muted-foreground line-through")}>
-                {it.title}
-              </p>
-              <span className="font-mono text-xs text-muted-foreground">{Math.round(it.minutes / 6) / 10}h</span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Remove"
-                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                onClick={() => run(() => deleteLearningItem(it.id))}
-              >
-                <Trash2 />
-              </Button>
+            <li key={it.id} className="group rounded-xl border bg-card px-4 py-3">
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => run(() => setLearningStatus(it.id, STATUS_NEXT[it.status]))}
+                  className={cn(
+                    "mt-0.5 shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold transition-colors",
+                    it.status === "done" && "bg-leaf/15 text-leaf",
+                    it.status === "doing" && "bg-accent text-accent-foreground",
+                    it.status === "todo" && "bg-muted text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {STATUS_TEXT[it.status]}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={cn("font-medium", it.status === "done" && "text-muted-foreground line-through")}>{it.title}</p>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span className="font-mono text-xs text-muted-foreground">{Math.round(it.minutes / 6) / 10}h</span>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Remove"
+                        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                        onClick={() => run(() => deleteLearningItem(it.id))}
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  </div>
+                  {it.notes ? <p className="mt-1 text-sm text-muted-foreground">{it.notes}</p> : null}
+                  <ResourceLinks resources={it.resources} />
+                </div>
+              </div>
             </li>
           ))}
         </ul>

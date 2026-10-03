@@ -1,28 +1,80 @@
 "use server";
 
-import { coachAnswer, type CoachFeedback } from "@career-os/agents";
-import { QUESTION_BANK, type QuestionTrack } from "@career-os/engine";
+import { generateInterviewQuestions, coachAnswer, type CoachFeedback } from "@career-os/agents";
+import type { QuestionTrack } from "@career-os/engine";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { db, setKv } from "@/lib/db";
+import { interviewCacheKey, type CachedInterviewBank } from "@/lib/interview-cache";
+import { getJob } from "@/lib/jobs";
 import { getProfile, getSettings } from "@/lib/store";
 
-function pick<T>(list: T[], n: number): T[] {
-  return [...list].sort(() => Math.random() - 0.5).slice(0, n);
+export type ActionResult = { ok: true; message?: string } | { ok: false; error: string };
+
+export async function generateSampleQuestions(input: {
+  track: QuestionTrack;
+  role?: string;
+  jobId?: number | null;
+}): Promise<ActionResult> {
+  const profile = getProfile();
+  const role = (input.role?.trim() || profile.targetTitles[0] || profile.headline || "Software Engineer").trim();
+  let jobDescription = "";
+  if (input.jobId) {
+    const job = getJob(input.jobId);
+    if (job) jobDescription = `${job.title} at ${job.company}\n\n${job.description}`;
+  }
+  const generated = await generateInterviewQuestions({
+    track: input.track,
+    role,
+    skills: profile.skills,
+    jobDescription,
+    count: 8,
+    model: getSettings().cursorModel || undefined,
+  });
+  setKv(interviewCacheKey(input.track, role), {
+    track: input.track,
+    role,
+    source: generated.source,
+    questions: generated.questions,
+    at: new Date().toISOString(),
+  } satisfies CachedInterviewBank);
+  revalidatePath("/interviews");
+  return {
+    ok: true,
+    message:
+      generated.source === "cursor"
+        ? `Generated ${generated.questions.length} questions for ${role}.`
+        : `Cursor offline — using fallback bank for ${role}.`,
+  };
 }
 
-export async function startMock(input: { track: QuestionTrack; role: string; count: number }) {
+export async function startMock(input: {
+  track: QuestionTrack;
+  role: string;
+  count: number;
+  jobId?: number | null;
+}) {
   const count = Math.min(8, Math.max(3, Math.round(input.count)));
-  const ofTrack = QUESTION_BANK.filter((q) => q.track === input.track);
-  const behavioural = QUESTION_BANK.filter((q) => q.track === "behavioural");
-  const hr = QUESTION_BANK.filter((q) => q.track === "hr_india");
-  const chosen =
-    input.track === "behavioural" || input.track === "hr_india"
-      ? pick(ofTrack, count)
-      : [...pick(behavioural, 1), ...pick(ofTrack, count - 2), ...pick(hr, 1)];
+  const profile = getProfile();
+  const role = input.role.trim() || profile.targetTitles[0] || "Software Engineer";
+  let jobDescription = "";
+  if (input.jobId) {
+    const job = getJob(input.jobId);
+    if (job) jobDescription = `${job.title} at ${job.company}\n\n${job.description}`;
+  }
+
+  const generated = await generateInterviewQuestions({
+    track: input.track,
+    role,
+    skills: profile.skills,
+    jobDescription,
+    count,
+    model: getSettings().cursorModel || undefined,
+  });
+
   const res = db()
     .prepare("INSERT INTO interview_sessions (track, role, questions) VALUES (?, ?, ?)")
-    .run(input.track, input.role.trim(), JSON.stringify(chosen));
+    .run(input.track, role, JSON.stringify(generated.questions));
   redirect(`/interviews/${res.lastInsertRowid}`);
 }
 
@@ -48,7 +100,9 @@ export async function submitAnswer(input: {
 }
 
 export async function finishMock(sessionId: number) {
-  const avg = db().prepare("SELECT ROUND(AVG(score)) AS a FROM interview_answers WHERE session_id = ?").get(sessionId) as { a: number | null };
+  const avg = db().prepare("SELECT ROUND(AVG(score)) AS a FROM interview_answers WHERE session_id = ?").get(sessionId) as {
+    a: number | null;
+  };
   db()
     .prepare("UPDATE interview_sessions SET finished_at = datetime('now'), avg_score = ? WHERE id = ? AND finished_at IS NULL")
     .run(avg.a ?? 0, sessionId);

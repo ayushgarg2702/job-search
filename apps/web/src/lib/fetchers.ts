@@ -69,6 +69,33 @@ export async function fetchJobSpy(
   }
 }
 
+/** Naukri via helper browser (shared profile — solve captcha once with Unlock Naukri). */
+export async function fetchNaukriBrowser(
+  browserWorkerUrl: string,
+  term: string,
+  location: string,
+  cfg: SearchConfig,
+): Promise<FetchResult> {
+  try {
+    const data = await getJson<{ jobs: NormalizedJob[]; error?: string }>(`${browserWorkerUrl}/search/naukri`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        search_term: term,
+        location: location === "Remote" ? "India" : location,
+        results_wanted: cfg.resultsPerSource,
+      }),
+    });
+    return { source: "naukri", jobs: data.jobs ?? [], error: data.error };
+  } catch (err) {
+    return {
+      source: "naukri",
+      jobs: [],
+      error: `Browser worker not reachable (${(err as Error).message}). Start it with: pnpm worker:browser, then Unlock Naukri.`,
+    };
+  }
+}
+
 type InstahyreJob = {
   id: number;
   title: string;
@@ -115,9 +142,27 @@ type LeverJob = { id: string; text: string; hostedUrl: string; applyUrl: string;
 type AshbyJob = { id: string; title: string; jobUrl: string; applyUrl: string; location: string; secondaryLocations?: { location: string }[]; descriptionPlain?: string; isRemote?: boolean; publishedAt?: string };
 
 function matchesTerm(title: string, terms: string[]): boolean {
-  if (terms.length === 0) return true;
-  const t = title.toLowerCase();
-  return terms.some((term) => term.toLowerCase().split(/\s+/).filter((w) => w.length > 2).some((w) => t.includes(w)));
+  if (terms.length === 0) return false;
+  const tokens = new Set(
+    title
+      .toLowerCase()
+      .replace(/\./g, "")
+      .split(/[^a-z0-9+#]+/)
+      .filter(Boolean),
+  );
+  return terms.some((term) => {
+    const words = term
+      .toLowerCase()
+      .replace(/\./g, "")
+      .split(/[^a-z0-9+#]+/)
+      .filter((w) => w.length > 1 && !["and", "the", "for", "of"].includes(w));
+    if (words.length === 0) return false;
+    const soft = new Set(["sr", "senior", "jr", "junior", "ii", "iii", "2", "3"]);
+    const hard = words.filter((w) => !soft.has(w));
+    const check = hard.length ? hard : words;
+    const hit = check.filter((w) => tokens.has(w)).length;
+    return hit >= Math.ceil(check.length * 0.6);
+  });
 }
 
 function prettySlug(slug: string) {

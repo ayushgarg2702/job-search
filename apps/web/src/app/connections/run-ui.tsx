@@ -1,10 +1,10 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Loader2, Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, KeyRound, Loader2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { startSearch } from "@/app/actions/search";
+import { startSearch, unlockNaukri } from "@/app/actions/search";
 import { Button } from "@/components/ui/button";
 import type { FetchRun } from "@/lib/runs";
 
@@ -58,7 +58,29 @@ export function SearchButton({ initiallyRunning }: { initiallyRunning: boolean }
   );
 }
 
+export function UnlockNaukriButton() {
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      variant="outline"
+      size="lg"
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const res = await unlockNaukri();
+          if (!res.ok) toast.error(res.error);
+          else toast.success(res.message);
+        })
+      }
+    >
+      {pending ? <Loader2 className="animate-spin" /> : <KeyRound />}
+      {pending ? "Opening…" : "Unlock Naukri"}
+    </Button>
+  );
+}
+
 export function RunLog({ runs }: { runs: FetchRun[] }) {
+  const [pending, startTransition] = useTransition();
   if (runs.length === 0) {
     return <p className="text-sm text-muted-foreground">No searches yet. Press Search now.</p>;
   }
@@ -75,19 +97,39 @@ export function RunLog({ runs }: { runs: FetchRun[] }) {
             </p>
           </div>
           <ul className="mt-2 space-y-1">
-            {run.log.map((l) => (
-              <li key={l.source} className="flex items-start gap-2 text-sm">
-                {l.error && l.found === 0 ? (
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-marigold" />
-                ) : (
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-leaf" />
-                )}
-                <span>
-                  <span className="font-medium">{SOURCE_LABEL[l.source] ?? l.source}</span>: {l.found} jobs
-                  {l.error && <span className="block text-muted-foreground">{l.error}</span>}
-                </span>
-              </li>
-            ))}
+            {run.log.map((l) => {
+              const needsUnlock = l.source === "naukri" && l.found === 0 && /captcha|unlock/i.test(l.error ?? "");
+              return (
+                <li key={`${run.id}-${l.source}`} className="flex items-start gap-2 text-sm">
+                  {l.error && l.found === 0 ? (
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-marigold" />
+                  ) : (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-leaf" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">{SOURCE_LABEL[l.source] ?? l.source}</span>: {l.found} jobs
+                    {l.error && <span className="block text-muted-foreground">{l.error}</span>}
+                    {needsUnlock && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="mt-1 h-auto px-0"
+                        disabled={pending}
+                        onClick={() =>
+                          startTransition(async () => {
+                            const res = await unlockNaukri();
+                            if (!res.ok) toast.error(res.error);
+                            else toast.success(res.message);
+                          })
+                        }
+                      >
+                        Unlock Naukri in helper browser
+                      </Button>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </li>
       ))}

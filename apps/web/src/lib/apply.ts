@@ -126,5 +126,9 @@ export async function startAutofill(job: Job): Promise<{ ok: true; message?: str
     };
   }
   setStatus(job.id, "autofilling", "Approved by you");
-  return { ok: true, message: "Approved. A browser window is opening the application." };
+  return {
+    ok: true,
+    message:
+      "Opening the company application in a helper browser. Fields will be filled for you — Career OS will not press Submit. You click Submit when ready.",
+  };
 }

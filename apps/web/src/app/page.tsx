@@ -2,7 +2,6 @@ import { STATUS_LABEL } from "@career-os/shared";
 import { ArrowRight, CheckCircle2, Circle, Flame } from "lucide-react";
 import Link from "next/link";
 import { ProgressLine } from "@/components/progress-line";
-import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { mainGoal } from "@/lib/goals";
 import { listJobs } from "@/lib/jobs";
@@ -23,9 +22,12 @@ export default function TodayPage() {
 
   const setup = [
     { done: profile.resumeText.length > 0, label: "Upload your resume", href: "/profile" },
-    { done: goal !== null, label: "Write down your goal", href: "/goals" },
-    { done: targets.length > 0, label: "Set a weekly target", href: "/goals" },
-    { done: searched, label: "Run your first job search", href: "/connections" },
+    {
+      done: profile.targetTitles.length > 0,
+      label: "Add the job titles you want",
+      href: "/profile",
+    },
+    { done: searched, label: "Search for jobs", href: "/connections" },
   ];
   const setupLeft = setup.filter((s) => !s.done).length;
 
@@ -87,7 +89,16 @@ export default function TodayPage() {
           </div>
           {waiting.length === 0 ? (
             <p className="mt-4 text-sm text-muted-foreground">
-              Nothing to approve right now. New drafts show up here after a search.
+              {searched ? (
+                "Nothing to approve right now. New drafts show up here after a search."
+              ) : (
+                <>
+                  No jobs yet.{" "}
+                  <Link href="/connections" className="font-medium text-ink underline-offset-4 hover:underline">
+                    Go to Job boards → Search now
+                  </Link>
+                </>
+              )}
             </p>
           ) : (
             <ul className="stagger mt-4 divide-y rounded-xl border bg-card">
@@ -130,9 +141,13 @@ export default function TodayPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-ink">This week</h2>
             {targets.length === 0 ? (
-              <Link href="/goals" className={buttonVariants({ variant: "outline" })}>
-                Set a weekly target
-              </Link>
+              <p className="text-sm text-muted-foreground">
+                Optional:{" "}
+                <Link href="/goals" className="font-medium text-ink underline-offset-4 hover:underline">
+                  set a weekly target
+                </Link>{" "}
+                if you want a number to chase.
+              </p>
             ) : (
               targets.map((t) => (
                 <div key={t.id}>

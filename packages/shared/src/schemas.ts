@@ -59,9 +59,9 @@ export type TargetInput = z.infer<typeof TargetSchema>;
 export const JobStatusSchema = z.enum(JOB_STATUSES);
 
 export const SearchConfigSchema = z.object({
-  searchTerms: z.array(z.string()).default(["software engineer"]),
+  searchTerms: z.array(z.string()).default([]),
   locations: z.array(z.string()).default(["Bengaluru", "Remote"]),
-  sources: z.array(z.string()).default(["naukri", "instahyre", "indeed", "ats"]),
+  sources: z.array(z.string()).default(["naukri", "instahyre", "indeed", "linkedin", "ats"]),
   atsCompanies: z
     .array(z.object({ provider: z.enum(["greenhouse", "lever", "ashby"]), slug: z.string() }))
     .default([]),

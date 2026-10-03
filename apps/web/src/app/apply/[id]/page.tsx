@@ -39,6 +39,16 @@ export default async function ApplyPage({ params }: PageProps<"/apply/[id]">) {
         </a>
       </header>
 
+      {(live || session?.status === "ready" || job.status === "ready_to_submit" || job.status === "autofilling") && (
+        <aside className="rounded-2xl border border-ink/15 bg-accent/40 px-4 py-3 text-sm text-ink animate-rise">
+          <p className="font-medium">Helper browser — not a redirect away from Career OS</p>
+          <p className="mt-1 text-muted-foreground">
+            A separate Chromium window opens the company&apos;s apply page and fills what it can. Career OS never presses
+            Submit, Apply, or Next. Review the form there, then you click Submit.
+          </p>
+        </aside>
+      )}
+
       <section className="flex flex-col gap-4 rounded-2xl border bg-card p-5 animate-rise sm:flex-row sm:items-center">
         <div className="flex flex-1 items-start gap-3">
           {live ? (
@@ -55,15 +65,16 @@ export default async function ApplyPage({ params }: PageProps<"/apply/[id]">) {
               {job.status === "submitted"
                 ? "Submitted. Nice."
                 : live
-                  ? "Working on it…"
+                  ? "Filling the form in the helper browser…"
                   : session?.status === "ready"
-                    ? "Waiting for you to press Submit"
+                    ? "Your turn — press Submit in the helper browser"
                     : session?.status === "failed"
                       ? "Autofill stopped"
                       : "Not started"}
             </p>
             <p className="text-sm text-muted-foreground">
-              {session?.message || "Approve the draft to open and fill the application, or fill it yourself with the answers below."}
+              {session?.message ||
+                "Approve the draft to open a helper browser and fill the form. You always press Submit yourself."}
             </p>
           </div>
         </div>
@@ -156,7 +167,7 @@ export default async function ApplyPage({ params }: PageProps<"/apply/[id]">) {
                 className="max-h-[42rem] w-full rounded-xl border object-cover object-top shadow-sm"
               />
               <figcaption className="text-xs text-muted-foreground">
-                The live window is still open in the autofill browser. Nothing was submitted.
+                The live window is still open in the helper browser. Nothing was submitted — you press Submit there.
               </figcaption>
             </figure>
           ) : (

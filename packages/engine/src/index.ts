@@ -3,3 +3,5 @@ export * from "./score";
 export * from "./roadmap";
 export * from "./interview";
 export * from "./resume-parse";
+export * from "./titles";
+export * from "./resources";

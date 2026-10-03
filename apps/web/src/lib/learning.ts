@@ -1,9 +1,18 @@
 import "server-only";
-import type { GapCount } from "@career-os/engine";
+import type { GapCount, LearnResource } from "@career-os/engine";
+import { mergeResources } from "@career-os/engine";
 import { db } from "./db";
 import { listJobs } from "./jobs";
 
-export type LearningItem = { id: number; skill: string; title: string; notes: string; status: "todo" | "doing" | "done"; minutes: number };
+export type LearningItem = {
+  id: number;
+  skill: string;
+  title: string;
+  notes: string;
+  resources: LearnResource[];
+  status: "todo" | "doing" | "done";
+  minutes: number;
+};
 
 /** Every posting mentions these; they aren't something you go and study. */
 const NOT_STUDYABLE = new Set(["Communication", "Leadership", "Agile"]);
@@ -22,14 +31,28 @@ export function skillGaps(limit = 12): GapCount[] {
     .slice(0, limit);
 }
 
+function parseResources(raw: string | null | undefined, skill: string): LearnResource[] {
+  try {
+    const parsed = JSON.parse(raw || "[]") as LearnResource[];
+    if (Array.isArray(parsed) && parsed.length > 0) return mergeResources(skill, parsed);
+  } catch {
+    // fall through
+  }
+  return mergeResources(skill);
+}
+
 export function listLearning(): LearningItem[] {
-  return db()
+  const rows = db()
     .prepare(`
       SELECT l.*, COALESCE(SUM(p.minutes), 0) AS minutes
       FROM learning_items l LEFT JOIN practice_logs p ON p.learning_item_id = l.id
       GROUP BY l.id
       ORDER BY CASE l.status WHEN 'doing' THEN 0 WHEN 'todo' THEN 1 ELSE 2 END, l.id DESC`)
-    .all() as LearningItem[];
+    .all() as Array<Omit<LearningItem, "resources"> & { resources: string }>;
+  return rows.map((r) => ({
+    ...r,
+    resources: parseResources(r.resources, r.skill),
+  }));
 }
 
 export function studyByDay(days = 28) {

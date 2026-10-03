@@ -165,9 +165,14 @@ export function DetailActions({ jobId, status, hasDraft }: { jobId: number; stat
             {hasDraft ? <RotateCcw /> : <PenLine />} {hasDraft ? "Rewrite" : "Write draft"}
           </Button>
           {hasDraft && (
-            <Button disabled={pending} onClick={() => run(() => approve(jobId), () => router.push(`/apply/${jobId}`))}>
-              <ThumbsUp /> Approve &amp; fill form
-            </Button>
+            <div className="flex flex-col items-stretch gap-1 sm:items-end">
+              <Button disabled={pending} onClick={() => run(() => approve(jobId), () => router.push(`/apply/${jobId}`))}>
+                <ThumbsUp /> Approve &amp; fill form
+              </Button>
+              <p className="max-w-xs text-xs text-muted-foreground sm:text-right">
+                Helper browser fills the company form. You press Submit — never auto-submitted.
+              </p>
+            </div>
           )}
         </>
       )}

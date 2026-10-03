@@ -1,30 +1,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { chromium, type BrowserContext, type Frame, type Page } from "playwright";
+import { chromium, type Frame, type Page } from "playwright";
+import { closeContext, getContext } from "./context";
 import { applicationUrl, decide } from "./match";
 import type { FieldInfo, Filled, SessionRequest, Skipped } from "./types";
 
 const DATA_DIR = process.env.CAREER_OS_DATA_DIR
   ? path.resolve(process.env.CAREER_OS_DATA_DIR)
   : path.resolve(import.meta.dirname, "../../../data");
-const HEADLESS = process.env.CAREER_OS_HEADLESS === "1";
-
-let context: BrowserContext | null = null;
-
-async function getContext(): Promise<BrowserContext> {
-  if (context) return context;
-  const profileDir = path.join(DATA_DIR, "browser-profile");
-  mkdirSync(profileDir, { recursive: true });
-  context = await chromium.launchPersistentContext(profileDir, {
-    headless: HEADLESS,
-    viewport: null,
-    args: ["--start-maximized"],
-  });
-  context.on("close", () => {
-    context = null;
-  });
-  return context;
-}
 
 async function renderResumePdf(req: SessionRequest): Promise<string> {
   const dir = path.join(DATA_DIR, "drafts");
@@ -200,5 +183,5 @@ export async function runSession(req: SessionRequest) {
 }
 
 export async function shutdown() {
-  await context?.close().catch(() => {});
+  await closeContext();
 }

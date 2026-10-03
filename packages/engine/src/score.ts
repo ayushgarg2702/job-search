@@ -1,6 +1,7 @@
 import type { Profile } from "@career-os/shared";
 import { normalizeCity } from "@career-os/shared";
 import { extractSkills, hasSkill } from "./skills";
+import { titleOverlapScore } from "./titles";
 
 export type JobLike = {
   title: string;
@@ -31,19 +32,6 @@ export function yearsRequired(description: string): number | null {
   return min;
 }
 
-function titleOverlap(jobTitle: string, targets: string[]): number {
-  if (targets.length === 0) return 0.5;
-  const jobWords = new Set(jobTitle.toLowerCase().split(/[^a-z0-9+#]+/).filter((w) => w.length > 1));
-  let best = 0;
-  for (const t of targets) {
-    const words = t.toLowerCase().split(/[^a-z0-9+#]+/).filter((w) => w.length > 1);
-    if (words.length === 0) continue;
-    const hit = words.filter((w) => jobWords.has(w)).length / words.length;
-    best = Math.max(best, hit);
-  }
-  return best;
-}
-
 /**
  * Plain, explainable fit score (0-100). No model call: it runs on every fetched
  * job, so it has to be fast and free. The deep agents only run on jobs that pass.
@@ -56,7 +44,7 @@ export function scoreJob(profile: Profile, job: JobLike): Evaluation {
   const blockers: string[] = [];
 
   const skillRatio = jdSkills.length ? matched.length / jdSkills.length : 0.4;
-  const titleRatio = titleOverlap(job.title, profile.targetTitles);
+  const titleRatio = titleOverlapScore(job.title, profile.targetTitles);
 
   const city = normalizeCity(job.location);
   const remote = job.isRemote || city === "Remote (India)";
@@ -94,6 +82,7 @@ export function scoreJob(profile: Profile, job: JobLike): Evaluation {
 
   if (matched.length) reasons.unshift(`You match ${matched.length} of ${jdSkills.length} skills it mentions.`);
   if (titleRatio >= 0.6) reasons.push("Title lines up with what you are targeting.");
+  else if (profile.targetTitles.length) blockers.push("Title does not match your target roles.");
 
   const raw =
     skillRatio * 55 + titleRatio * 25 + (cityOk ? 12 : 0) + 8 * yearsFactor - blockers.length * 12;

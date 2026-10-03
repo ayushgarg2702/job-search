@@ -63,16 +63,21 @@ export function InboxActions({ jobId, status }: { jobId: number; status: JobStat
   }
 
   return (
-    <div className="flex gap-2">
-      <Button variant="ghost" disabled={pending} onClick={() => run(() => decline(jobId))}>
-        <ThumbsDown /> Decline
-      </Button>
-      <Link href={`/inbox/${jobId}`} className={buttonVariants({ variant: "outline" })}>
-        Review
-      </Link>
-      <Button disabled={pending} onClick={() => run(() => approve(jobId), () => router.push(`/apply/${jobId}`))}>
-        <ThumbsUp /> Approve
-      </Button>
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex gap-2">
+        <Button variant="ghost" disabled={pending} onClick={() => run(() => decline(jobId))}>
+          <ThumbsDown /> Decline
+        </Button>
+        <Link href={`/inbox/${jobId}`} className={buttonVariants({ variant: "outline" })}>
+          Review
+        </Link>
+        <Button disabled={pending} onClick={() => run(() => approve(jobId), () => router.push(`/apply/${jobId}`))}>
+          <ThumbsUp /> Approve &amp; fill form
+        </Button>
+      </div>
+      <p className="max-w-xs text-right text-xs text-muted-foreground">
+        Opens a helper browser and fills fields. You click Submit — Career OS never does.
+      </p>
     </div>
   );
 }
